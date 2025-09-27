@@ -1,0 +1,98 @@
+import datetime
+import pandas as pd
+
+def validate_config(config):
+    required_keys = {
+        'start_date', 'end_date', 
+        'no_work_pattern', 'work_pattern',
+        'no_of_shifts', 'shifts', "min_time_between_shifts",
+        'no_of_employees', 'employees',
+    } #TODO: Check for any more required mandatory keys
+    
+    ############################# Required keys #############################
+    if not required_keys.issubset(config.keys()):
+        raise ValueError(f'Config must contain {required_keys}')
+    
+    
+    ############################# Start date and end date #############################
+    try: 
+        config['start_date'] = pd.to_datetime(config["start_date"])
+        config['end_date'] = pd.to_datetime(config["end_date"])
+    except:
+        raise ValueError('Start date and end date must be in the format YYYY-MM-DD')
+    if config['start_date'] > config['end_date']:
+        raise ValueError('Start date must be before end date')
+    config["no_days"] = (config['end_date'] - config['start_date']).days + 1
+    
+    
+    ############################# Shifts #############################
+    if not isinstance(config['no_of_shifts'], int):
+        raise ValueError('Number of shifts must be an integer')
+    if not isinstance(config['shifts'], list):
+        raise ValueError('Shifts must be a list')
+    if not isinstance(config['min_time_between_shifts'], int):
+        raise ValueError('Minimum time between shifts must be an integer')
+    if len(config['shifts']) != config['no_of_shifts']:
+        raise ValueError('Number of shifts must match the length of shifts list')
+    
+    for shift in config['shifts']:
+        if not isinstance(shift, dict):
+            raise ValueError('Each shift must be a dictionary')
+        required_keys_shifts = {'shift_id', 'start_time', 'end_time', 'min_no_of_employees', 'max_no_of_employees'}
+        if not required_keys_shifts.issubset(shift.keys()):
+            raise ValueError(f'Each shift must contain the keys: {required_keys_shifts}')
+        try:
+            shift['start_time'] = datetime.datetime.combine(datetime.date.min, pd.to_datetime(shift['start_time']).time())
+            shift['end_time'] = datetime.datetime.combine(datetime.date.min, pd.to_datetime(shift['end_time']).time())
+            if shift['start_time'] >= shift['end_time']:
+                shift['end_time'] += datetime.timedelta(days=1)
+        except:
+            raise ValueError('Start time and end time must be in the format HH:MM:SS')
+        if not (isinstance(shift['min_no_of_employees'], int) and isinstance(shift['max_no_of_employees'], int)):
+            raise ValueError('Number of employees in shift must be integers')
+        if not (shift['min_no_of_employees'] <= shift['max_no_of_employees']):
+            raise ValueError('Number of employees in shift must satisfy min <= max')
+    
+    config["all_shift_ids"] = [shift['shift_id'] for shift in config['shifts']]
+    config["Unacceptable_shift_patterns"] = []
+    for shift in config['shifts']:
+        for other_shift in config['shifts']:
+            if shift['shift_id'] != other_shift['shift_id']:
+                time_difference = other_shift['start_time'] + datetime.timedelta(days=1) - shift['end_time']
+                if time_difference.total_seconds()//3600 < config['min_time_between_shifts']:
+                    config["Unacceptable_shift_patterns"].append((shift['shift_id'], other_shift['shift_id']))
+          
+    ############################# Work pattern #############################
+    if not isinstance(config['no_work_pattern'], int):
+        raise ValueError('No work pattern must be an integer')
+    if not isinstance(config['work_pattern'], list):
+        raise ValueError('Work pattern must be a list')
+    if len(config['work_pattern']) != config['no_work_pattern']:
+        raise ValueError('Number of shifts must match the length of work pattern list')
+    for work_pattern in config['work_pattern']:
+        if not isinstance(work_pattern, dict):
+            raise ValueError('Each work pattern must be a dictionary')
+        required_keys_work_pattern = {'pettern_id', 'no_working_days', 'no_off_days'}
+        if not required_keys_work_pattern.issubset(work_pattern.keys()):
+            raise ValueError(f'Each work pattern must contain the keys: {required_keys_work_pattern}')
+        if not isinstance(work_pattern['work_pattern_id'], int):
+            raise ValueError('Work pattern id must be an integer')
+        if not isinstance(work_pattern['no_working_days'], int):
+            raise ValueError('Number of working days must be an integer')
+        if not isinstance(work_pattern['no_off_days'], int):
+            raise ValueError('Number of off days must be an integer')
+        if "strict_weekend_off" not in work_pattern.keys():
+            work_pattern["strict_weekend_off"] = False
+        if "same_shift_in_pattern" not in work_pattern.keys():
+            work_pattern["same_shift_in_pattern"] = False
+        if "shifts" not in config.keys():
+            work_pattern["shifts"] = config["all_shift_ids"]      
+    
+    ############################# Employees #############################
+    if not isinstance(config['no_of_employees'], int):
+        raise ValueError('Number of employees must be an integer')
+    if not isinstance(config['employees'], list):
+        raise ValueError('Employees must be a list')
+    # if len(config['employees']) != config['no_of_employees']:
+    #     raise ValueError('Number of employees must match the length of employees list')
+    return config
