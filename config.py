@@ -121,12 +121,15 @@ def generate_config_from_json(json_config):
         constraints["min_count"][shift["shift_id"]] = shift["min_no_of_employees"]
         constraints["max_count"][shift["shift_id"]] = shift["max_no_of_employees"]
     
-    return no_days, config, inputs, constraints
+    return no_days, config, inputs, constraints, employees
 
 with open('code/config.json', 'r') as f:
     json_config = json.load(f)
 
-no_days, config, inputs, constraints = generate_config_from_json(json_config)
+start_date = datetime.datetime.strptime(json_config["start_date"], "%Y-%m-%d")
+end_date = datetime.datetime.strptime(json_config["end_date"], "%Y-%m-%d")
+no_days, config, inputs, constraints, employees = generate_config_from_json(json_config)
+shift_colours = {"Off": "D3D3D3"} | {f"Shift {shift['shift_id']}": shift["colour"] for shift in json_config["shifts"]}
 
 # print("Config:")
 # print(json.dumps(config, indent=2))

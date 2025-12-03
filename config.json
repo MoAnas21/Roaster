@@ -24,6 +24,7 @@
             "end_time": "06:00:00",
             "min_no_of_employees": 3,
             "max_no_of_employees": 6,
+            "colour": "FF5733",
             "TODO: optimal_no_of_employees": 5
         },
         {
@@ -32,6 +33,7 @@
             "end_time": "10:00:00",
             "min_no_of_employees": 4,
             "max_no_of_employees": 5,
+            "colour": "33FF57",
             "optimal_no_of_employees": 5
         },
         {
@@ -40,6 +42,7 @@
             "end_time": "14:00:00",
             "min_no_of_employees": 4,
             "max_no_of_employees": 6,
+            "colour": "3357FF",
             "optimal_no_of_employees": 5
         },
         {
@@ -48,6 +51,7 @@
             "end_time": "18:00:00",
             "min_no_of_employees": 2,
             "max_no_of_employees": 5,
+            "colour": "F1C40F",
             "optimal_no_of_employees": 3
         },
         {
@@ -56,6 +60,7 @@
             "end_time": "00:00:00",
             "min_no_of_employees": 3,
             "max_no_of_employees": 5,
+            "colour": "8E44AD",
             "optimal_no_of_employees": 4
         }
     ],
@@ -63,6 +68,7 @@
     "no_of_employees": 30,
     "employees": [
         {
+            "employee_id": "DEF001",
             "name": "Employee 1",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 2, 3],
@@ -74,6 +80,7 @@
             "quality": [0, 1, 2, 3, 4]
         },
         {
+            "employee_id": "ABC002",
             "name": "Employee 2",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 3, 4],
@@ -90,6 +97,7 @@
             "quality": [1, 2, 3, 4, 0]
         },
         {
+            "employee_id": "ADC003",
             "name": "Employee 3",
             "preferred_work_pattern": 1,
             "shift_preference": [2, 4, 5],
@@ -100,6 +108,7 @@
             "quality": [2, 3, 4, 0, 1]
         },
         {
+            "employee_id": "ACD004",
             "name": "Employee 4",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 3, 4],
@@ -110,6 +119,7 @@
             "quality": [3, 4, 0, 1, 2]
         },
         {
+            "employee_id": "DEF005",
             "name": "Employee 5",
             "preferred_work_pattern": 1,
             "shift_preference": [2, 3, 5],
@@ -120,6 +130,7 @@
             "quality": [4, 0, 1, 2, 3]
         },
         {
+            "employee_id": "FED006",
             "name": "Employee 6",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 3, 5],
@@ -130,6 +141,7 @@
             "quality": [0, 1, 2, 3, 4]
         },
         {
+            "employee_id": "EFD007",
             "name": "Employee 7",
             "preferred_work_pattern": 1,
             "shift_preference": [2, 3, 5],
@@ -146,6 +158,7 @@
             "quality": [1, 2, 3, 4, 0]
         },
         {
+            "employee_id": "DEF001",
             "name": "Employee 8",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 4, 5],
@@ -156,6 +169,7 @@
             "quality": [2, 3, 4, 0, 1]
         },
         {
+            "employee_id": "CDE009",
             "name": "Employee 9",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 2, 4],
@@ -172,6 +186,7 @@
             "quality": [3, 4, 0, 1, 2]
         },
         {
+            "employee_id": "DEC010",
             "name": "Employee 10",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 3, 5],
@@ -193,6 +208,7 @@
             "quality": [4, 0, 1, 2, 3]
         },
         {
+            "employee_id": "EDE011",
             "name": "Employee 11",
             "preferred_work_pattern": 1,
             "shift_preference": [2, 3, 4],
@@ -203,6 +219,7 @@
             "quality": [0, 1, 2, 3, 4]
         },
         {
+            "employee_id": "FDE012",
             "name": "Employee 12",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 3, 5],
@@ -213,6 +230,7 @@
             "quality": [1, 2, 3, 4, 0]
         },
         {
+            "employee_id": "DEF013",
             "name": "Employee 13",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 3, 5],
@@ -223,6 +241,7 @@
             "quality": [2, 3, 4, 0, 1]
         },
         {
+            "employee_id": "EDF014",
             "name": "Employee 14",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 2, 4],
@@ -233,6 +252,7 @@
             "quality": [3, 4, 0, 1, 2]
         },
         {
+            "employee_id": "FDE015",
             "name": "Employee 15",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 2, 5],
@@ -243,6 +263,7 @@
             "quality": [4, 0, 1, 2, 3]
         },
         {
+            "employee_id": "DEF016",
             "name": "Employee 16",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 3, 5],
@@ -253,6 +274,7 @@
             "quality": [0, 1, 2, 3, 4]
         },
         {
+            "employee_id": "EDF017",
             "name": "Employee 17",
             "preferred_work_pattern": 1,
             "shift_preference": [2, 3, 5],
@@ -263,6 +285,7 @@
             "quality": [1, 2, 3, 4, 0]
         },
         {
+            "employee_id": "FDE018",
             "name": "Employee 18",
             "preferred_work_pattern": 2,
             "shift_preference": [2, 3, 4],
@@ -273,6 +296,7 @@
             "quality": [2, 3, 4, 0, 1]
         },
         {
+            "employee_id": "DEF019",
             "name": "Employee 19",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 2, 4],
@@ -289,6 +313,7 @@
             "quality": [3, 4, 0, 1, 2]
         },
         {
+            "employee_id": "EFD020",
             "name": "Employee 20",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 2, 5],
@@ -299,6 +324,7 @@
             "quality": [4, 0, 1, 2, 3]
         },
         {
+            "employee_id": "FDE021",
             "name": "Employee 21",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 3, 4],
@@ -309,6 +335,7 @@
             "quality": [0, 1, 2, 3, 4]
         },
         {
+            "employee_id": "DEF022",
             "name": "Employee 22",
             "preferred_work_pattern": 2,
             "shift_preference": [2, 4, 5],
@@ -319,6 +346,7 @@
             "quality": [1, 2, 3, 4, 0]
         },
         {
+            "employee_id": "EDF023",
             "name": "Employee 23",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 2, 4],
@@ -335,6 +363,7 @@
             "quality": [2, 3, 4, 0, 1]
         },
         {
+            "employee_id": "FDE024",
             "name": "Employee 24",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 2, 3],
@@ -345,6 +374,7 @@
             "quality": [3, 4, 0, 1, 2]
         },
         {
+            "employee_id": "DEF025",
             "name": "Employee 25",
             "preferred_work_pattern": 1,
             "shift_preference": [2, 3, 5],
@@ -361,6 +391,7 @@
             "quality": [4, 0, 1, 2, 3]
         },
         {
+            "employee_id": "EFD026",
             "name": "Employee 26",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 2, 4],
@@ -371,6 +402,7 @@
             "quality": [0, 1, 2, 3, 4]
         },
         {
+            "employee_id": "FDE027",
             "name": "Employee 27",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 4, 5],
@@ -381,6 +413,7 @@
             "quality": [1, 2, 3, 4, 0]
         },
         {
+            "employee_id": "DEF028",
             "name": "Employee 28",
             "preferred_work_pattern": 2,
             "shift_preference": [2, 3, 5],
@@ -397,6 +430,7 @@
             "quality": [2, 3, 4, 0, 1]
         },
         {
+            "employee_id": "EFD029",
             "name": "Employee 29",
             "preferred_work_pattern": 1,
             "shift_preference": [1, 2, 5],
@@ -407,6 +441,7 @@
             "quality": [3, 4, 0, 1, 2]
         },
         {
+            "employee_id": "FDE030",
             "name": "Employee 30",
             "preferred_work_pattern": 2,
             "shift_preference": [3, 4, 5],
