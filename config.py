@@ -115,6 +115,46 @@ def generate_config_from_json(json_config):
     end_date_obj = datetime.datetime.strptime(json_config["end_date"], "%Y-%m-%d")
     no_days = (end_date_obj - start_date_obj).days + 1
     
+    # Get valid pattern IDs (pattern_id values from work_pattern list)
+    valid_pattern_ids = set()
+    for pattern in json_config["work_pattern"]:
+        if "pettern_id" in pattern:
+            valid_pattern_ids.add(pattern["pettern_id"])
+    
+    # Filter employees: only include those with valid work patterns
+    filtered_employees = []
+    filtered_out_employees = []
+    
+    for employee in employees:
+        preferred_pattern_id = employee.get("preferred_work_pattern")
+        if preferred_pattern_id is None:
+            filtered_out_employees.append({
+                "employee_id": employee.get("employee_id", "unknown"),
+                "name": employee.get("name", "unknown"),
+                "reason": "missing preferred_work_pattern"
+            })
+            continue
+        
+        if preferred_pattern_id not in valid_pattern_ids:
+            filtered_out_employees.append({
+                "employee_id": employee.get("employee_id", "unknown"),
+                "name": employee.get("name", "unknown"),
+                "reason": f"preferred_work_pattern {preferred_pattern_id} not found in work_pattern list (valid IDs: {sorted(valid_pattern_ids)})"
+            })
+            continue
+        
+        filtered_employees.append(employee)
+    
+    # Log filtered employees
+    if filtered_out_employees:
+        print(f"\nWARNING: Filtered out {len(filtered_out_employees)} employee(s) with invalid work patterns:")
+        for emp in filtered_out_employees:
+            print(f"  - {emp['employee_id']} ({emp['name']}): {emp['reason']}")
+    
+    # Update employee count
+    config["no_employees"] = len(filtered_employees)
+    print(f"Processing {config['no_employees']} employee(s) with valid work patterns")
+    
     inputs = {
         "shift_day": [],
         "work_pattern": [],
@@ -124,7 +164,7 @@ def generate_config_from_json(json_config):
         "shift_preferences": []  # List of sets, one per employee containing preferred shift IDs (empty set = no preference)
     }
 
-    for employee in employees:
+    for employee in filtered_employees:
         pattern_id = employee["preferred_work_pattern"] - 1
         pattern = config["work_pattern"].get(pattern_id, {})
         
@@ -206,7 +246,8 @@ def generate_config_from_json(json_config):
         constraints["min_count"][shift["shift_id"]] = shift["min_no_of_employees"]
         constraints["max_count"][shift["shift_id"]] = shift["max_no_of_employees"]
     
-    return no_days, config, inputs, constraints, employees
+    # Return filtered employees list (only those with valid work patterns)
+    return no_days, config, inputs, constraints, filtered_employees
 
 with open('config.json', 'r') as f:
     json_config = json.load(f)

@@ -423,6 +423,17 @@
         {
             "employee_id": "FDE030",
             "name": "Employee 30",
+            "preferred_work_pattern": 4,
+            "shift_preference": [1, 2, 3],
+            "no_work_days_from_previous_pattern": 1,
+            "no_off_days_from_previous_pattern": 0,
+            "prev_preference_quality_index": 0.8,
+            "last_shift": 2,
+            "quality": [4, 0, 1, 2, 3]
+        },
+        {
+            "employee_id": "FDD030",
+            "name": "Employee 31",
             "preferred_work_pattern": 2,
             "shift_preference": [1, 2, 3],
             "no_work_days_from_previous_pattern": 1,
