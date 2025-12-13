@@ -181,5 +181,35 @@ def validate_config(config):
                     raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): shift_preference[{pref_idx}] must be an integer')
                 if shift_id not in valid_shift_ids:
                     raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): shift_preference[{pref_idx}] = {shift_id} is not a valid shift ID. Valid IDs: {valid_shift_ids}')
+        
+        # Validate shift exclusions if present
+        if 'shift_exclusion' in employee:
+            shift_excl = employee['shift_exclusion']
+            if not isinstance(shift_excl, list):
+                raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): "shift_exclusion" must be a list')
+            
+            if len(shift_excl) == 0:
+                raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): "shift_exclusion" cannot be empty (use no field for no exclusions)')
+            
+            # Get valid shift IDs
+            valid_shift_ids = config.get("all_shift_ids", [])
+            if not valid_shift_ids:
+                # Fallback: generate from no_of_shifts
+                valid_shift_ids = list(range(1, config.get("no_of_shifts", 0) + 1))
+            
+            for excl_idx, shift_id in enumerate(shift_excl):
+                if not isinstance(shift_id, int):
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): shift_exclusion[{excl_idx}] must be an integer')
+                if shift_id not in valid_shift_ids:
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): shift_exclusion[{excl_idx}] = {shift_id} is not a valid shift ID. Valid IDs: {valid_shift_ids}')
+            
+            # Check for conflicts: employee cannot have both preference and exclusion for same shift
+            if 'shift_preference' in employee and employee['shift_preference']:
+                conflicting_shifts = set(shift_excl) & set(employee['shift_preference'])
+                if conflicting_shifts:
+                    raise ValueError(
+                        f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): '
+                        f'shift_exclusion and shift_preference cannot overlap. Conflicting shifts: {sorted(conflicting_shifts)}'
+                    )
     
     return config

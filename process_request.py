@@ -62,6 +62,34 @@ def validate_inputs(config, inputs, constraints):
                             elif shift_id not in valid_shift_ids and shift_id != 0:
                                 errors.append(f"Employee {i}: shift_preferences[{i}] contains invalid shift ID: {shift_id}. Valid IDs: {valid_shift_ids}")
         
+        # Validate shift_exclusions if present
+        if "shift_exclusions" in inputs:
+            if len(inputs["shift_exclusions"]) != n_emp:
+                errors.append(f"Input 'shift_exclusions' length ({len(inputs['shift_exclusions'])}) doesn't match number of employees ({n_emp})")
+            else:
+                # Validate each exclusion set
+                valid_shift_ids = set(range(1, config.get("no_shifts", 0) + 1))
+                for i, excl_set in enumerate(inputs["shift_exclusions"]):
+                    if not isinstance(excl_set, set):
+                        errors.append(f"Employee {i}: shift_exclusions[{i}] must be a set")
+                    else:
+                        # Check that all shift IDs are valid
+                        for shift_id in excl_set:
+                            if not isinstance(shift_id, int):
+                                errors.append(f"Employee {i}: shift_exclusions[{i}] contains non-integer: {shift_id}")
+                            elif shift_id not in valid_shift_ids:
+                                errors.append(f"Employee {i}: shift_exclusions[{i}] contains invalid shift ID: {shift_id}. Valid IDs: {valid_shift_ids}")
+                        
+                        # Check for conflicts with preferences
+                        if "shift_preferences" in inputs and i < len(inputs["shift_preferences"]):
+                            pref_set = inputs["shift_preferences"][i]
+                            conflicting_shifts = excl_set & pref_set
+                            if conflicting_shifts:
+                                errors.append(
+                                    f"Employee {i}: shift_exclusions[{i}] and shift_preferences[{i}] cannot overlap. "
+                                    f"Conflicting shifts: {sorted(conflicting_shifts)}"
+                                )
+        
         # Validate quality_count structure
         if "quality_count" in inputs:
             for i, qc in enumerate(inputs["quality_count"]):

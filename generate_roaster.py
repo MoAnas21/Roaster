@@ -43,7 +43,8 @@ def simulate_roaster(day_no, total_no_days, config, inputs, constraints):
             "quality_count": quality_count,  # Updated quality counts
             "schedule": current_schedule,  # Current schedule state
             "employee_leaves": inputs.get("employee_leaves", []),  # Pass leave information
-            "shift_preferences": inputs.get("shift_preferences", [])  # Pass shift preferences
+            "shift_preferences": inputs.get("shift_preferences", []),  # Pass shift preferences
+            "shift_exclusions": inputs.get("shift_exclusions", [])  # Pass shift exclusions
         }
         
         # Recursively solve remaining days

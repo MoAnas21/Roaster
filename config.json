@@ -90,6 +90,7 @@
             "employee_id": "ABC002",
             "name": "Employee 2",
             "preferred_work_pattern": 2,
+            "shift_exclusion": [4, 5],
             "leaves": [
                 {
                     "start_date": "2025-01-14",
@@ -239,6 +240,7 @@
             "employee_id": "EDF014",
             "name": "Employee 14",
             "preferred_work_pattern": 2,
+            "shift_exclusion": [1, 5],
             "no_work_days_from_previous_pattern": 5,
             "no_off_days_from_previous_pattern": 1,
             "prev_preference_quality_index": 0.8,

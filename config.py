@@ -161,7 +161,8 @@ def generate_config_from_json(json_config):
         "previous_day": [],
         "quality_count": [],
         "employee_leaves": [],  # List of sets, one per employee containing day indices when on leave
-        "shift_preferences": []  # List of sets, one per employee containing preferred shift IDs (empty set = no preference)
+        "shift_preferences": [],  # List of sets, one per employee containing preferred shift IDs (empty set = no preference)
+        "shift_exclusions": []  # List of sets, one per employee containing excluded shift IDs (empty set = no exclusions)
     }
 
     for employee in filtered_employees:
@@ -236,6 +237,15 @@ def generate_config_from_json(json_config):
         else:
             # No preference = can work any shift (empty set means no restriction)
             inputs["shift_preferences"].append(set())
+        
+        # Process shift exclusions: if employee has shift_exclusion, prevent those shifts
+        if "shift_exclusion" in employee and employee["shift_exclusion"]:
+            # Convert to set of shift IDs
+            excluded_shifts = set(employee["shift_exclusion"])
+            inputs["shift_exclusions"].append(excluded_shifts)
+        else:
+            # No exclusion = can work any shift (empty set means no restriction)
+            inputs["shift_exclusions"].append(set())
     
     constraints = {
         "min_count": {},

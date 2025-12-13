@@ -30,16 +30,17 @@ def check_feasibility(config, inputs, constraints, no_days):
             f"total minimum required ({total_min_required})"
         )
     
-    # Check 2: Day-by-day feasibility (considering leaves, work patterns, and shift preferences)
+    # Check 2: Day-by-day feasibility (considering leaves, work patterns, shift preferences, and shift exclusions)
     employee_leaves = inputs.get("employee_leaves", [])
     shift_preferences = inputs.get("shift_preferences", [])
+    shift_exclusions = inputs.get("shift_exclusions", [])
     
     for day in range(no_days):
         # Count available employees for this day (overall)
         available_employees = []
         unavailable_reasons = {}
         
-        # Count available employees per shift (considering shift preferences)
+        # Count available employees per shift (considering shift preferences and exclusions)
         available_per_shift = {shift_id: [] for shift_id in constraints["min_count"].keys()}
         
         for i in range(config["no_employees"]):
@@ -66,13 +67,18 @@ def check_feasibility(config, inputs, constraints, no_days):
             # Employee is available (not on leave, not on work pattern off day)
             available_employees.append(i)
             
-            # Check shift preferences: can this employee work each shift?
+            # Check shift preferences and exclusions: can this employee work each shift?
             employee_prefs = shift_preferences[i] if i < len(shift_preferences) else set()
+            employee_exclusions = shift_exclusions[i] if i < len(shift_exclusions) else set()
             
             for shift_id in constraints["min_count"].keys():
                 # Employee can work this shift if:
-                # - They have no preferences (empty set = can work any shift), OR
-                # - This shift is in their preference list
+                # - Shift is NOT in their exclusion list, AND
+                # - (They have no preferences (empty set = can work any shift), OR this shift is in their preference list)
+                if shift_id in employee_exclusions:
+                    # Employee cannot work this shift (excluded)
+                    continue
+                
                 if not employee_prefs or shift_id in employee_prefs:
                     available_per_shift[shift_id].append(i)
         
@@ -97,7 +103,7 @@ def check_feasibility(config, inputs, constraints, no_days):
             elif num_available_for_shift == min_req:
                 warnings.append(
                     f"WARNING: Day {day + 1}, Shift {shift_id}: Exactly {num_available_for_shift} employees "
-                    f"available for {min_req} minimum requirement (no flexibility, considering shift preferences)"
+                    f"available for {min_req} minimum requirement (no flexibility, considering shift preferences and exclusions)"
                 )
         
         # Warning if close to minimum (overall)
@@ -209,7 +215,7 @@ def check_feasibility(config, inputs, constraints, no_days):
     return len(errors) == 0, errors + warnings
 
 
-def check_feasibility_per_day(config, inputs, constraints, day, employee_leaves=None, shift_preferences=None):
+def check_feasibility_per_day(config, inputs, constraints, day, employee_leaves=None, shift_preferences=None, shift_exclusions=None):
     """
     Check feasibility for a specific day.
     Useful for checking during scheduling.
@@ -221,10 +227,12 @@ def check_feasibility_per_day(config, inputs, constraints, day, employee_leaves=
         employee_leaves = inputs.get("employee_leaves", [])
     if shift_preferences is None:
         shift_preferences = inputs.get("shift_preferences", [])
+    if shift_exclusions is None:
+        shift_exclusions = inputs.get("shift_exclusions", [])
     
     # Count available employees (overall)
     available_count = 0
-    # Count available employees per shift (considering shift preferences)
+    # Count available employees per shift (considering shift preferences and exclusions)
     available_per_shift = {shift_id: 0 for shift_id in constraints["min_count"].keys()}
     
     for i in range(config["no_employees"]):
@@ -245,11 +253,17 @@ def check_feasibility_per_day(config, inputs, constraints, day, employee_leaves=
         # Employee is available
         available_count += 1
         
-        # Check shift preferences
+        # Check shift preferences and exclusions
         employee_prefs = shift_preferences[i] if i < len(shift_preferences) else set()
+        employee_exclusions = shift_exclusions[i] if i < len(shift_exclusions) else set()
         
         for shift_id in constraints["min_count"].keys():
-            # Employee can work this shift if no preferences or shift in preferences
+            # Employee can work this shift if:
+            # - Shift is NOT in their exclusion list, AND
+            # - (No preferences or shift in preferences)
+            if shift_id in employee_exclusions:
+                continue  # Excluded shift
+            
             if not employee_prefs or shift_id in employee_prefs:
                 available_per_shift[shift_id] += 1
     
@@ -263,11 +277,11 @@ def check_feasibility_per_day(config, inputs, constraints, day, employee_leaves=
     
     # Check each shift (considering shift preferences)
     for shift_id, min_req in constraints["min_count"].items():
-        if available_per_shift[shift_id] < min_req:
-            return False, (
-                f"Day {day + 1}, Shift {shift_id}: Only {available_per_shift[shift_id]} employees available "
-                f"(considering shift preferences) but {min_req} minimum required"
-            )
+            if available_per_shift[shift_id] < min_req:
+                return False, (
+                    f"Day {day + 1}, Shift {shift_id}: Only {available_per_shift[shift_id]} employees available "
+                    f"(considering shift preferences and exclusions) but {min_req} minimum required"
+                )
     
     return True, ""
 

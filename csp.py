@@ -74,6 +74,13 @@ def create_day_schedule(config, inputs, constraints, prev_solutions=None, curren
             disallowed_shifts = set(range(1, config["no_shifts"] + 1)) - shift_preferences[i]
             for disallowed_shift in disallowed_shifts:
                 model.Add(x[i] != disallowed_shift)
+        
+        # Apply shift exclusions: if employee has exclusions, prevent those shifts
+        shift_exclusions = inputs.get("shift_exclusions", [])
+        if i < len(shift_exclusions) and shift_exclusions[i]:
+            # Employee cannot work any shift in the exclusion list
+            for excluded_shift in shift_exclusions[i]:
+                model.Add(x[i] != excluded_shift)
     
     # Hard forbidden constraints: prevent certain shift sequences
     for k_val, forbidden_val in config["forbidden_constraints"]:
