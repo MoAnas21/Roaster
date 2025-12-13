@@ -1,19 +1,129 @@
 from config import config, inputs, constraints, no_days, employees, shift_colours, start_date, end_date
 from generate_roaster import simulate_roaster
+from feasibility_checker import check_feasibility
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import PatternFill
 
+# Validate inputs before starting
+def validate_inputs(config, inputs, constraints):
+    """Validate that all required inputs are present and correctly formatted."""
+    errors = []
+    
+    # Check required config keys
+    required_config = ["no_employees", "no_shifts", "work_pattern", "forbidden_constraints"]
+    for key in required_config:
+        if key not in config:
+            errors.append(f"Missing config key: {key}")
+    
+    # Check required input keys
+    required_inputs = ["shift_day", "work_pattern", "previous_day", "quality_count"]
+    for key in required_inputs:
+        if key not in inputs:
+            errors.append(f"Missing input key: {key}")
+    
+    # Validate array lengths
+    if "no_employees" in config:
+        n_emp = config["no_employees"]
+        for key in ["shift_day", "work_pattern", "previous_day", "quality_count"]:
+            if key in inputs and len(inputs[key]) != n_emp:
+                errors.append(f"Input '{key}' length ({len(inputs[key])}) doesn't match number of employees ({n_emp})")
+        
+        # Validate employee_leaves if present
+        if "employee_leaves" in inputs:
+            if len(inputs["employee_leaves"]) != n_emp:
+                errors.append(f"Input 'employee_leaves' length ({len(inputs['employee_leaves'])}) doesn't match number of employees ({n_emp})")
+            else:
+                # Validate each leave set
+                for i, leave_set in enumerate(inputs["employee_leaves"]):
+                    if not isinstance(leave_set, set):
+                        errors.append(f"Employee {i}: employee_leaves[{i}] must be a set")
+                    else:
+                        # Check that all leave day indices are valid (non-negative integers)
+                        for day_idx in leave_set:
+                            if not isinstance(day_idx, int) or day_idx < 0:
+                                errors.append(f"Employee {i}: employee_leaves[{i}] contains invalid day index: {day_idx}")
+        
+        # Validate shift_preferences if present
+        if "shift_preferences" in inputs:
+            if len(inputs["shift_preferences"]) != n_emp:
+                errors.append(f"Input 'shift_preferences' length ({len(inputs['shift_preferences'])}) doesn't match number of employees ({n_emp})")
+            else:
+                # Validate each preference set
+                valid_shift_ids = set(range(1, config.get("no_shifts", 0) + 1))
+                for i, pref_set in enumerate(inputs["shift_preferences"]):
+                    if not isinstance(pref_set, set):
+                        errors.append(f"Employee {i}: shift_preferences[{i}] must be a set")
+                    else:
+                        # Check that all shift IDs are valid
+                        for shift_id in pref_set:
+                            if not isinstance(shift_id, int):
+                                errors.append(f"Employee {i}: shift_preferences[{i}] contains non-integer: {shift_id}")
+                            elif shift_id not in valid_shift_ids and shift_id != 0:
+                                errors.append(f"Employee {i}: shift_preferences[{i}] contains invalid shift ID: {shift_id}. Valid IDs: {valid_shift_ids}")
+        
+        # Validate quality_count structure
+        if "quality_count" in inputs:
+            for i, qc in enumerate(inputs["quality_count"]):
+                if "no_shifts" in config and len(qc) != config["no_shifts"]:
+                    errors.append(f"Employee {i} quality_count length ({len(qc)}) doesn't match number of shifts ({config['no_shifts']})")
+    
+    # Validate constraints
+    if "min_count" in constraints and "max_count" in constraints:
+        for shift_id in range(1, config.get("no_shifts", 0) + 1):
+            if shift_id in constraints["min_count"] and shift_id in constraints["max_count"]:
+                if constraints["min_count"][shift_id] > constraints["max_count"][shift_id]:
+                    errors.append(f"Shift {shift_id}: min_count ({constraints['min_count'][shift_id]}) > max_count ({constraints['max_count'][shift_id]})")
+    
+    if errors:
+        raise ValueError("Input validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+    
+    return True
+
+# Initialize schedule
 inputs["schedule"] = []
-print("Starting simulation...")
-print("no_days:", no_days)
-print("config:", config)
-print("inputs:", inputs)
-print("constraints:", constraints)
+
+# Validate inputs
+print("Validating inputs...")
+try:
+    validate_inputs(config, inputs, constraints)
+    print("✓ Input validation passed")
+except ValueError as e:
+    print(f"✗ Validation error: {e}")
+    raise
+
+# Check feasibility
+print("\nChecking feasibility...")
+is_feasible, feasibility_messages = check_feasibility(config, inputs, constraints, no_days)
+
+if feasibility_messages:
+    print("\nFeasibility Check Results:")
+    for msg in feasibility_messages:
+        if msg.startswith("INFEASIBLE"):
+            print(f"  ✗ {msg}")
+        else:
+            print(f"  ⚠ {msg}")
+    
+    if not is_feasible:
+        print("\n✗ Problem is INFEASIBLE. Please adjust constraints, leaves, or work patterns.")
+        raise ValueError("Problem is infeasible - see feasibility check results above")
+    else:
+        print("\n⚠ Warnings detected but problem may still be solvable.")
+
+print("\nStarting simulation...")
+print(f"Days to schedule: {no_days}")
+print(f"Employees: {config['no_employees']}")
+print(f"Shifts: {config['no_shifts']}")
+print(f"Date range: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+
 final_solutions, final_quality_count = simulate_roaster(0, no_days, config, inputs, constraints)
 
 if final_solutions is not None:
-    added_final_solution = [inputs["previous_day"]] + final_solutions
+    # Combine previous day (if exists) with generated schedule
+    if "previous_day" in inputs and inputs["previous_day"]:
+        added_final_solution = [inputs["previous_day"]] + final_solutions
+    else:
+        added_final_solution = final_solutions
     data = {}
     for i, day in enumerate(added_final_solution):
         # column_name = f"Day {i + 1}"
@@ -72,3 +182,13 @@ if final_solutions is not None:
             else:
                 cell.fill = value_colors.get(cell_value, PatternFill(fill_type=None))
     wb.save("roaster.xlsx")
+    print(f"\n✓ Roaster generated successfully!")
+    print(f"  - CSV saved: roaster.csv")
+    print(f"  - Excel saved: roaster.xlsx")
+else:
+    print("\n✗ Failed to generate roaster schedule.")
+    print("  Possible reasons:")
+    print("  - Constraints too strict (min/max employee counts)")
+    print("  - Work patterns incompatible with date range")
+    print("  - Insufficient employees for shift requirements")
+    print("  - Try increasing 'threshold' in config or relaxing constraints")

@@ -81,8 +81,36 @@ def validate_config(config):
             raise ValueError('Number of working days must be an integer')
         if not isinstance(work_pattern['no_off_days'], int):
             raise ValueError('Number of off days must be an integer')
-        if "strict_weekend_off" not in work_pattern.keys():
+        # Validate strict_weekend_off
+        if "strict_weekend_off" in work_pattern:
+            strict_weekend_off_val = work_pattern["strict_weekend_off"]
+            # Handle both string "True"/"False" and boolean
+            if isinstance(strict_weekend_off_val, str):
+                if strict_weekend_off_val.lower() not in ["true", "false"]:
+                    raise ValueError(f'Work pattern {work_pattern.get("pettern_id", "unknown")}: strict_weekend_off must be "True", "False", or boolean')
+            elif not isinstance(strict_weekend_off_val, bool):
+                raise ValueError(f'Work pattern {work_pattern.get("pettern_id", "unknown")}: strict_weekend_off must be "True", "False", or boolean')
+            
+            strict_weekend_off = str(strict_weekend_off_val).lower() == "true" or strict_weekend_off_val is True
+            
+            # Validate that strict_weekend_off makes sense
+            if strict_weekend_off:
+                # For strict_weekend_off, off_days should be 2 (weekends)
+                if work_pattern["no_off_days"] != 2:
+                    raise ValueError(
+                        f'Work pattern {work_pattern.get("pettern_id", "unknown")}: strict_weekend_off=True requires '
+                        f'no_off_days=2 (for weekends), but got no_off_days={work_pattern["no_off_days"]}'
+                    )
+                # Total days should be 7 (5 work + 2 off)
+                total_days = work_pattern["no_working_days"] + work_pattern["no_off_days"]
+                if total_days != 7:
+                    raise ValueError(
+                        f'Work pattern {work_pattern.get("pettern_id", "unknown")}: strict_weekend_off=True requires '
+                        f'total_days=7 (5 work + 2 off), but got total_days={total_days}'
+                    )
+        else:
             work_pattern["strict_weekend_off"] = False
+        
         if "same_shift_in_pattern" not in work_pattern.keys():
             work_pattern["same_shift_in_pattern"] = False
         if "shifts" not in config.keys():
@@ -95,4 +123,63 @@ def validate_config(config):
         raise ValueError('Employees must be a list')
     # if len(config['employees']) != config['no_of_employees']:
     #     raise ValueError('Number of employees must match the length of employees list')
+    
+    # Validate employee leaves
+    schedule_start = config['start_date']
+    schedule_end = config['end_date']
+    
+    for emp_idx, employee in enumerate(config['employees']):
+        if not isinstance(employee, dict):
+            raise ValueError(f'Employee at index {emp_idx} must be a dictionary')
+        
+        # Validate leaves if present
+        if 'leaves' in employee:
+            leaves = employee['leaves']
+            if not isinstance(leaves, list):
+                raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): "leaves" must be a list')
+            
+            for leave_idx, leave in enumerate(leaves):
+                if not isinstance(leave, dict):
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): Leave {leave_idx} must be a dictionary')
+                
+                required_leave_keys = {'start_date', 'end_date'}
+                if not required_leave_keys.issubset(leave.keys()):
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): Leave {leave_idx} must contain keys: {required_leave_keys}')
+                
+                # Validate date formats
+                try:
+                    leave_start = pd.to_datetime(leave['start_date'])
+                    leave_end = pd.to_datetime(leave['end_date'])
+                except:
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): Leave {leave_idx} dates must be in format YYYY-MM-DD')
+                
+                # Validate date order
+                if leave_start > leave_end:
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): Leave {leave_idx} start_date ({leave["start_date"]}) must be before or equal to end_date ({leave["end_date"]})')
+                
+                # Validate leave is within schedule range
+                if leave_start < schedule_start or leave_end > schedule_end:
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): Leave {leave_idx} ({leave["start_date"]} to {leave["end_date"]}) is outside schedule range ({schedule_start.strftime("%Y-%m-%d")} to {schedule_end.strftime("%Y-%m-%d")})')
+        
+        # Validate shift preferences if present
+        if 'shift_preference' in employee:
+            shift_pref = employee['shift_preference']
+            if not isinstance(shift_pref, list):
+                raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): "shift_preference" must be a list')
+            
+            if len(shift_pref) == 0:
+                raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): "shift_preference" cannot be empty (use no field for no preference)')
+            
+            # Get valid shift IDs
+            valid_shift_ids = config.get("all_shift_ids", [])
+            if not valid_shift_ids:
+                # Fallback: generate from no_of_shifts
+                valid_shift_ids = list(range(1, config.get("no_of_shifts", 0) + 1))
+            
+            for pref_idx, shift_id in enumerate(shift_pref):
+                if not isinstance(shift_id, int):
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): shift_preference[{pref_idx}] must be an integer')
+                if shift_id not in valid_shift_ids:
+                    raise ValueError(f'Employee {emp_idx} (ID: {employee.get("employee_id", "unknown")}): shift_preference[{pref_idx}] = {shift_id} is not a valid shift ID. Valid IDs: {valid_shift_ids}')
+    
     return config

@@ -67,11 +67,26 @@ def generate_config_from_json(json_config):
         if "no_working_days" in pattern and "no_off_days" in pattern:
             total_days = pattern["no_working_days"] + pattern["no_off_days"]
             
-            off_days = list(range(total_days - pattern["no_off_days"], total_days))
+            # Check if strict_weekend_off is enabled
+            strict_weekend_off = False
+            if "strict_weekend_off" in pattern:
+                # Handle both string "True"/"False" and boolean
+                strict_weekend_off = str(pattern["strict_weekend_off"]).lower() == "true" or pattern["strict_weekend_off"] is True
+            
+            if strict_weekend_off:
+                # For strict_weekend_off, off days must be weekends (Saturday=5, Sunday=6)
+                # In a 7-day week: Monday=0, Tuesday=1, ..., Saturday=5, Sunday=6
+                # We need to ensure weekends are always off
+                # For a 5 work + 2 off pattern, weekends should be off
+                off_days = [5, 6]  # Saturday and Sunday
+            else:
+                # Normal pattern: off days at the end of the cycle
+                off_days = list(range(total_days - pattern["no_off_days"], total_days))
             
             config["work_pattern"][pattern_id] = {
                 "total_days": total_days,
-                "off_days": off_days
+                "off_days": off_days,
+                "strict_weekend_off": strict_weekend_off
             }
     
     shifts_with_times = []
@@ -96,21 +111,91 @@ def generate_config_from_json(json_config):
                     config["forbidden_constraints"].append((shift["shift_id"], other_shift["shift_id"]))
 
     employees = json_config["employees"]
-    no_days = (datetime.datetime.strptime(json_config["end_date"], "%Y-%m-%d") - 
-               datetime.datetime.strptime(json_config["start_date"], "%Y-%m-%d")).days + 1
+    start_date_obj = datetime.datetime.strptime(json_config["start_date"], "%Y-%m-%d")
+    end_date_obj = datetime.datetime.strptime(json_config["end_date"], "%Y-%m-%d")
+    no_days = (end_date_obj - start_date_obj).days + 1
     
     inputs = {
         "shift_day": [],
         "work_pattern": [],
         "previous_day": [],
-        "quality_count": []
+        "quality_count": [],
+        "employee_leaves": [],  # List of sets, one per employee containing day indices when on leave
+        "shift_preferences": []  # List of sets, one per employee containing preferred shift IDs (empty set = no preference)
     }
 
     for employee in employees:
+        pattern_id = employee["preferred_work_pattern"] - 1
+        pattern = config["work_pattern"].get(pattern_id, {})
+        
+        # Check if this pattern has strict_weekend_off
+        if pattern.get("strict_weekend_off", False):
+            # Recompute pattern position based on start_date to align with weekends
+            # For strict_weekend_off, weekends (Saturday=5, Sunday=6) must be off days
+            # Pattern cycle: 7 days (5 work + 2 off on weekends)
+            # shift_day tracks position in pattern: 0-4 = work days, 5-6 = off days (weekends)
+            
+            # Find what day of week the start_date is (Monday=0, Sunday=6)
+            start_weekday = start_date_obj.weekday()  # Monday=0, Sunday=6
+            
+            # For strict_weekend_off pattern:
+            # - Monday (0) -> shift_day = 0 (first work day)
+            # - Tuesday (1) -> shift_day = 1 (second work day)
+            # - ...
+            # - Friday (4) -> shift_day = 4 (fifth work day)
+            # - Saturday (5) -> shift_day = 5 (first off day)
+            # - Sunday (6) -> shift_day = 6 (second off day)
+            
+            # shift_day directly corresponds to weekday for strict_weekend_off
+            initial_shift_day = start_weekday
+            
+            # Calculate no_work_days and no_off_days from initial_shift_day
+            if initial_shift_day < 5:  # Monday-Friday (work days)
+                no_work_days = initial_shift_day  # Days into work week
+                no_off_days = 0  # Not in weekend yet
+            elif initial_shift_day == 5:  # Saturday (first off day)
+                no_work_days = 5  # Completed all 5 work days
+                no_off_days = 0   # Starting first off day
+            else:  # initial_shift_day == 6, Sunday (second off day)
+                no_work_days = 5  # Completed all 5 work days
+                no_off_days = 1   # On second off day
+            
+            # Update employee's pattern position
+            employee["no_work_days_from_previous_pattern"] = no_work_days
+            employee["no_off_days_from_previous_pattern"] = no_off_days
+        
+        # Use the (possibly recomputed) pattern position
         inputs["shift_day"].append(employee["no_work_days_from_previous_pattern"] + employee["no_off_days_from_previous_pattern"])
-        inputs["work_pattern"].append(employee["preferred_work_pattern"] - 1)
+        inputs["work_pattern"].append(pattern_id)
         inputs["previous_day"].append(employee["last_shift"])
         inputs["quality_count"].append(employee["quality"])
+        
+        # Process leaves: convert date ranges to day indices (0-based from start_date)
+        leave_days = set()
+        if "leaves" in employee and employee["leaves"]:
+            for leave in employee["leaves"]:
+                leave_start = datetime.datetime.strptime(leave["start_date"], "%Y-%m-%d")
+                leave_end = datetime.datetime.strptime(leave["end_date"], "%Y-%m-%d")
+                
+                # Calculate day indices (0-based from start_date)
+                start_day_idx = (leave_start - start_date_obj).days
+                end_day_idx = (leave_end - start_date_obj).days
+                
+                # Add all days in the leave range (inclusive)
+                for day_idx in range(start_day_idx, end_day_idx + 1):
+                    if 0 <= day_idx < no_days:  # Ensure within schedule range
+                        leave_days.add(day_idx)
+        
+        inputs["employee_leaves"].append(leave_days)
+        
+        # Process shift preferences: if employee has shift_preference, restrict to those shifts
+        if "shift_preference" in employee and employee["shift_preference"]:
+            # Convert to set of shift IDs
+            preferred_shifts = set(employee["shift_preference"])
+            inputs["shift_preferences"].append(preferred_shifts)
+        else:
+            # No preference = can work any shift (empty set means no restriction)
+            inputs["shift_preferences"].append(set())
     
     constraints = {
         "min_count": {},
@@ -123,7 +208,7 @@ def generate_config_from_json(json_config):
     
     return no_days, config, inputs, constraints, employees
 
-with open('code/config.json', 'r') as f:
+with open('config.json', 'r') as f:
     json_config = json.load(f)
 
 start_date = datetime.datetime.strptime(json_config["start_date"], "%Y-%m-%d")
